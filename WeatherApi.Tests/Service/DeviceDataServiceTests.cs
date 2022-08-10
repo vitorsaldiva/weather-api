@@ -64,7 +64,7 @@ namespace WeatherApi.Tests.Service
             var response = await service.GetDeviceDataAsync(deviceId, date, sensorType);
 
             //Assert
-            Assert.Empty(response);
+            Assert.NotEmpty(response);
 
         }
         [Theory]
