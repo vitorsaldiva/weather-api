@@ -1,10 +1,8 @@
 ﻿using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.IO.Compression;
 using System.Linq;
@@ -17,15 +15,17 @@ namespace WeatherApi.v1.Repository
 {
     public class CloudContainer : ICloudContainer
     {
-        private string connectionString = "";
-        private string containerName = "";
+        private readonly string connectionString = "";
+        private readonly string containerName = "";
+        private readonly string cultureName = "";
         private readonly IConfiguration configuration;
 
         public CloudContainer(IConfiguration configuration)
         {
             this.configuration = configuration;
-            connectionString = configuration.GetSection("AzureStorage:ConnectionString").Value;
-            containerName = configuration.GetSection("AzureStorage:ContainerName").Value;
+            connectionString = this.configuration.GetSection("AzureStorage:ConnectionString").Value;
+            containerName = this.configuration.GetSection("AzureStorage:ContainerName").Value;
+            cultureName = this.configuration.GetSection("Localization:Culture").Value;
         }
 
         public async Task<IDictionary<string, IEnumerable<CsvContent>>> GetItemsAsync(string deviceId, string date, string sensorType = "")
@@ -43,7 +43,7 @@ namespace WeatherApi.v1.Repository
                 var sensor = GetSensorType(item);
                 var blobService = container.GetBlobClient(item.Name);
                 var stream = await blobService.OpenReadAsync();
-                response.Add(sensor, StreamHelper.GetCsvData(stream, cultureInfo: CultureInfo.GetCultureInfo("pt-Br")));
+                response.Add(sensor, StreamHelper.GetCsvData(stream, cultureInfo: CultureInfo.GetCultureInfo(cultureName)));
             }
 
             if (response is null || response.Count().Equals(0))
@@ -74,7 +74,7 @@ namespace WeatherApi.v1.Repository
                     var fileToBeOpened = package.Entries.Where((ZipArchiveEntry z) => z.FullName.Contains(date))
                             .Select(b => b.FullName).FirstOrDefault();
                     var fileStream = package.GetEntry(fileToBeOpened).Open();
-                    response.Add(sensor, StreamHelper.GetCsvData(fileStream, CultureInfo.GetCultureInfo("pt-Br")));
+                    response.Add(sensor, StreamHelper.GetCsvData(fileStream, CultureInfo.GetCultureInfo(cultureName)));
                 }
             }
             else
@@ -89,7 +89,7 @@ namespace WeatherApi.v1.Repository
                 var fileToBeOpened = package.Entries.Where((ZipArchiveEntry z) => z.FullName.Contains(date))
                         .Select(b => b.FullName).FirstOrDefault();
                 var fileStream = package.GetEntry(fileToBeOpened).Open();
-                response.Add(sensorType, StreamHelper.GetCsvData(fileStream, CultureInfo.GetCultureInfo("pt-Br")));
+                response.Add(sensorType, StreamHelper.GetCsvData(fileStream, CultureInfo.GetCultureInfo(cultureName)));
             }
 
             return response;
